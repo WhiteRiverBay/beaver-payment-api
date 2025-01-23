@@ -1,0 +1,136 @@
+package ltd.wrb.payment.job.trx;
+
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.math.RoundingMode;
+import java.util.List;
+
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.tron.trident.core.ApiWrapper;
+import org.tron.trident.core.key.KeyPair;
+import org.tron.trident.core.utils.ByteArray;
+import org.tron.trident.proto.Chain.Transaction.Contract;
+import org.tron.trident.proto.Chain.Transaction.Contract.ContractType;
+import org.tron.trident.proto.Response.BlockExtention;
+import org.tron.trident.proto.Response.TransactionExtention;
+import org.tron.trident.proto.Response.TransactionInfo;
+import org.tron.trident.proto.Response.TransactionInfo.Log;
+import org.tron.trident.utils.Base58Check;
+import org.tron.trident.utils.Numeric;
+
+import lombok.extern.slf4j.Slf4j;
+import ltd.wrb.payment.service.KV;
+
+@Slf4j
+public class USDTDepositScanner implements InitializingBean {
+
+    private ApiWrapper apiWrapper;
+
+    @Autowired
+    private KV kv;
+
+    private static final String TRANSFER_METHOD_SIGNATURE = "ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+    }
+
+    public void init() {
+        log.info("Initializing USDT deposit job...");
+        String apiKey = System.getenv("TRON_GRID_API_KEY");
+        String network = System.getenv("TRON_NETWORK");
+        KeyPair tronKeyPair = KeyPair.generate();
+        // for inquiring , the private key is randomly generated
+        String hexPrivateKey = tronKeyPair.toPrivateKey();
+        apiWrapper = "mainnet".equalsIgnoreCase(network) ? ApiWrapper.ofMainnet(hexPrivateKey, apiKey)
+                : "shasta".equalsIgnoreCase(network) ? ApiWrapper.ofShasta(hexPrivateKey)
+                        : "nile".equalsIgnoreCase(network) ? ApiWrapper.ofNile(hexPrivateKey)
+                                : ApiWrapper.ofMainnet(hexPrivateKey, apiKey);
+    }
+
+    public void scanAndDeposit() throws Exception {
+        log.info("Scanning and depositing USDT...");
+        String keyBlockStarted = "USDTDepositScanner.blockStarted";
+
+        // get the last block number
+        String blockStarted = kv != null ? kv.get(keyBlockStarted) : null;
+        // get current block
+        long currentBlock = apiWrapper.getNowBlock().getBlockHeader().getRawData().getNumber();
+        log.info("Current block: {}", currentBlock);
+        Long started = null;
+
+        if (blockStarted == null) {
+            String lookbackBlocks = System.getenv("TRON_MAX_TRACEBACK_BLOCKS");
+            started = currentBlock - Long.parseLong(lookbackBlocks);
+        } else {
+            started = Long.parseLong(blockStarted);
+        }
+        // USDT Contract
+        // scan the blocks
+        for (long i = started; i <= currentBlock; i++) {
+            // get the block
+            BlockExtention block = apiWrapper.getBlockByNum(i);
+            // get the transactions
+            List<TransactionExtention> transactions = block.getTransactionsList();
+            for (TransactionExtention tx : transactions) {
+                if (!tx.getTransaction().hasRawData()
+                        || tx.getTransaction().getRawData().getContractCount() == 0) {
+                    continue;
+                }
+
+                Contract contract = tx.getTransaction().getRawData().getContract(0);
+                // log the contract address
+                log.info("Contract name: {}", contract.getContractName());
+                ContractType type = contract.getType();
+                if (type == ContractType.TriggerSmartContract) {
+
+                    TransactionInfo info = apiWrapper
+                            .getTransactionInfoById(ByteArray.toHexString(tx.getTxid().toByteArray()));
+                    if (info == null
+                            || info.getReceipt() == null
+                            || info.getReceipt().getResultValue() != 0) {
+                        continue;
+                    }
+                    // get the contract address
+                    String contractAddress = Base58Check.bytesToBase58(info.getContractAddress().toByteArray());
+                    // check if the contract data is a transfer contract
+                    if (contractAddress.equals(System.getenv("TRON_USDT_CONTRACT"))) {
+                        List<Log> logs = info.getLogList();
+                        for (Log l : logs) {
+                            if (TRANSFER_METHOD_SIGNATURE.equals(l.getTopics(0).toStringUtf8())) {
+                                String from = "41"
+                                        + Numeric.toHexString(l.getTopics(1).toByteArray()).substring(2);
+                                from = Base58Check.bytesToBase58(Numeric.hexStringToByteArray(from));
+
+                                String to = "41"
+                                        + Numeric.toHexString(l.getTopics(2).toByteArray()).substring(2);
+                                to = Base58Check.bytesToBase58(Numeric.hexStringToByteArray(to));
+
+                                BigInteger amount = new BigInteger(
+                                        Numeric.toHexString(l.getData().toByteArray()).substring(2), 16);
+
+                                // decimals of USDT is 6
+                                BigDecimal _amount = new BigDecimal(amount).divide(new BigDecimal(1e6), 6,
+                                        RoundingMode.CEILING);
+
+                                log.info("From: {}, To: {}, Value: {}", from, to, _amount);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        USDTDepositScanner scanner = new USDTDepositScanner();
+        scanner.init();
+        try {
+            scanner.scanAndDeposit();
+        } catch (Exception e) {
+            log.error("Error scanning and depositing USDT", e);
+        }
+    }
+
+}
