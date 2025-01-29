@@ -1,5 +1,12 @@
 package ltd.wrb.payment.controller;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -34,13 +41,6 @@ import ltd.wrb.payment.util.IpLimiter;
 import ltd.wrb.payment.util.RedisUtils;
 import ltd.wrb.payment.util.Result;
 
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-
 @RestController
 @RequestMapping("/api/v1")
 @Slf4j
@@ -71,7 +71,7 @@ public class APIV1Controller {
         return Result.success(walletService.getWallets(order.getUid()));
     }
 
-    @IpLimiter(limit = 60, time = 60)
+    @IpLimiter(limit = 600, time = 60)
     @PostMapping("/order")
     public Result createOrder(@RequestBody PaymentDTO paymentDTO) {
         try {
