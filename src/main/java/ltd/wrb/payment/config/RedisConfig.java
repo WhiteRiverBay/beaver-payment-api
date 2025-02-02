@@ -2,9 +2,6 @@ package ltd.wrb.payment.config;
 
 import java.io.File;
 import java.time.Duration;
-import java.util.function.Supplier;
-
-import javax.net.ssl.SNIHostName;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

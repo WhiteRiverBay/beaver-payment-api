@@ -17,7 +17,6 @@ public class ReportJob {
     public void report(String message) {
         if (!enabled()) {
             log.warn("Telegram group chat id or bot token is not set");
-            return;
         }
         // send message to telegram group
         // TODO: implement telegram bot

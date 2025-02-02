@@ -1,25 +1,19 @@
 package ltd.wrb.payment.controller;
 
 import java.io.File;
+import java.lang.management.ManagementFactory;
+import java.lang.management.OperatingSystemMXBean;
+import java.lang.management.ThreadMXBean;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.lang.management.ManagementFactory;
-import java.lang.management.OperatingSystemMXBean;
-import java.lang.management.ThreadMXBean;
-
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Predicate;
-import jakarta.persistence.criteria.Root;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort.Direction;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -28,19 +22,20 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.persistence.criteria.Predicate;
 import ltd.wrb.payment.controller.dto.Ga;
 import ltd.wrb.payment.controller.dto.WalletDumpDTO;
 import ltd.wrb.payment.enums.ChainType;
 import ltd.wrb.payment.enums.TradeType;
+import ltd.wrb.payment.job.DepositJob;
 import ltd.wrb.payment.model.TradeLog;
 import ltd.wrb.payment.model.Wallet;
-import ltd.wrb.payment.repository.WalletRepository;
 import ltd.wrb.payment.repository.TradeLogRepository;
+import ltd.wrb.payment.repository.WalletRepository;
 import ltd.wrb.payment.util.GAUtil;
 import ltd.wrb.payment.util.IpLimiter;
 import ltd.wrb.payment.util.RedisUtils;
 import ltd.wrb.payment.util.Result;
-import ltd.wrb.payment.job.DepositJob;
 
 @RestController
 @RequestMapping("/_op")
@@ -185,45 +180,42 @@ public class OpController {
             return Result.error("invalid token");
         }
 
-        Page<TradeLog> tradeLogs = tradeLogRepository.findAll(new Specification<TradeLog>() {
-            @Override
-            public Predicate toPredicate(Root<TradeLog> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
-                List<Predicate> predicates = new ArrayList<>();
-                if (id != null) {
-                    predicates.add(criteriaBuilder.equal(root.get("id"), id));
-                }
-                if (uid != null) {
-                    predicates.add(criteriaBuilder.equal(root.get("uid"), uid));
-                }
-                if (paymentId != null) {
-                    predicates.add(criteriaBuilder.equal(root.get("paymentId"), paymentId));
-                }
-                if (type != null) {
-                    predicates.add(criteriaBuilder.equal(root.get("type"), type));
-                }
-                if (txHash != null) {
-                    predicates.add(criteriaBuilder.equal(root.get("txHash"), txHash));
-                }
-                if (contractTokenAddress != null) {
-                    predicates.add(criteriaBuilder.equal(root.get("token"), contractTokenAddress));
-                }
-                if (chainId != null) {
-                    predicates.add(criteriaBuilder.equal(root.get("chainId"), chainId));
-                }
-                if (txFrom != null) {
-                    predicates.add(criteriaBuilder.equal(root.get("txFrom"), txFrom));
-                }
-                if (txTo != null) {
-                    predicates.add(criteriaBuilder.equal(root.get("txTo"), txTo));
-                }
-                if (begin != null) {
-                    predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("createdAt"), begin));
-                }
-                if (end != null) {
-                    predicates.add(criteriaBuilder.lessThan(root.get("createdAt"), end));
-                }
-                return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+        Page<TradeLog> tradeLogs = tradeLogRepository.findAll((root, query, criteriaBuilder) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (id != null) {
+                predicates.add(criteriaBuilder.equal(root.get("id"), id));
             }
+            if (uid != null) {
+                predicates.add(criteriaBuilder.equal(root.get("uid"), uid));
+            }
+            if (paymentId != null) {
+                predicates.add(criteriaBuilder.equal(root.get("paymentId"), paymentId));
+            }
+            if (type != null) {
+                predicates.add(criteriaBuilder.equal(root.get("type"), type));
+            }
+            if (txHash != null) {
+                predicates.add(criteriaBuilder.equal(root.get("txHash"), txHash));
+            }
+            if (contractTokenAddress != null) {
+                predicates.add(criteriaBuilder.equal(root.get("token"), contractTokenAddress));
+            }
+            if (chainId != null) {
+                predicates.add(criteriaBuilder.equal(root.get("chainId"), chainId));
+            }
+            if (txFrom != null) {
+                predicates.add(criteriaBuilder.equal(root.get("txFrom"), txFrom));
+            }
+            if (txTo != null) {
+                predicates.add(criteriaBuilder.equal(root.get("txTo"), txTo));
+            }
+            if (begin != null) {
+                predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("createdAt"), begin));
+            }
+            if (end != null) {
+                predicates.add(criteriaBuilder.lessThan(root.get("createdAt"), end));
+            }
+            return criteriaBuilder.and(predicates.toArray(Predicate[]::new));
         }, pageable);
 
         return Result.success(tradeLogs);

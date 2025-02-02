@@ -1,10 +1,10 @@
 package ltd.wrb.payment.job;
 
 import java.io.IOException;
-import java.util.List;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.RoundingMode;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -60,7 +60,7 @@ public class RedoImpl implements Redo {
             }
 
             // analyze the logs of the transaction, is it a trc20 transfer?
-            if (receipt.getLogs().size() == 0) {
+            if (receipt.getLogs().isEmpty()) {
                 throw new RuntimeException("No logs found in transaction: " + hash);
             }
             Log transferEvent = receipt.getLogs().get(0);
@@ -94,7 +94,7 @@ public class RedoImpl implements Redo {
                     transferEvent.getBlockNumber(), false);
 
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("Failed to check transaction: {}", hash, e);
         }
     }
 }

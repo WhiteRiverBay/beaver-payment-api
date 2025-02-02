@@ -202,15 +202,20 @@ public class APIV1Controller {
         }
 
         try {
-            if (tx.getChainType() == ChainType.TRON) {
-                redo.checkTron(tx.getHash());
-                return Result.SUCCESS;
-            } else if (tx.getChainType() == ChainType.EVM) {
-                redo.checkEth(tx.getHash(), tx.getChainId());
-                return Result.SUCCESS;
-            } else {
-                return Result.error("Unsupported chain type");
-            }
+            return switch (tx.getChainType()) {
+                case TRON -> {
+                    redo.checkTron(tx.getHash());
+                    yield Result.SUCCESS;
+                }
+                case EVM -> {
+                    redo.checkEth(tx.getHash(), tx.getChainId());
+                    yield Result.SUCCESS;
+                }
+                default -> {
+                    log.error("Unsupported chain type: {}", tx.getChainType());
+                    yield Result.error("Unsupported chain type");
+                }
+            };
         } catch (Exception e) {
             return Result.error(e.getMessage());
         }

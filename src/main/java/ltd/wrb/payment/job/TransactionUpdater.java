@@ -1,7 +1,6 @@
 package ltd.wrb.payment.job;
 
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -85,9 +84,7 @@ public class TransactionUpdater {
                     tradeLogRepository.save(tradeLog);
                 }
             } catch (Exception e) {
-                e.printStackTrace();
-                log.error("Failed to get transaction receipt for tx hash {}", tradeLog.getTxHash());
-                continue;
+                log.error("Failed to get transaction receipt for tx hash {}", tradeLog.getTxHash(), e);
             }
 
         }

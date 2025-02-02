@@ -1,5 +1,11 @@
 package ltd.wrb.payment.service.impl;
 
+import java.math.BigInteger;
+import java.security.PublicKey;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.bouncycastle.util.encoders.Hex;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +16,7 @@ import org.web3j.crypto.Keys;
 import lombok.extern.slf4j.Slf4j;
 import ltd.wrb.payment.enums.ChainType;
 import ltd.wrb.payment.model.Wallet;
+import ltd.wrb.payment.repository.AddressPoolRepository;
 import ltd.wrb.payment.repository.WalletRepository;
 import ltd.wrb.payment.service.WalletService;
 import ltd.wrb.payment.util.EncryptUtil;
@@ -17,22 +24,19 @@ import ltd.wrb.payment.util.KeyPairBytes;
 import ltd.wrb.payment.util.RSAUtil;
 import ltd.wrb.payment.util.SolanaUtil;
 import ltd.wrb.payment.util.TRONUtil;
-import ltd.wrb.payment.util.Web3jUtil;
 import ltd.wrb.payment.util.TRONUtil.TKeyPair;
-
-import java.security.PublicKey;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.math.BigInteger;
+import ltd.wrb.payment.util.Web3jUtil;
 
 @Service
 @Slf4j
 public class WalletServiceImpl implements WalletService, InitializingBean {
 
     @Autowired
+    private AddressPoolRepository addressPoolRepository;
+    @Autowired
     private WalletRepository walletRepository;
 
+    @Override
     public Wallet getEvmWallet(String userId, boolean craeteIfNotExist) {
         Wallet wallet = walletRepository.findByUidAndChainType(userId, ChainType.EVM);
         if (wallet == null && craeteIfNotExist) {
@@ -60,6 +64,7 @@ public class WalletServiceImpl implements WalletService, InitializingBean {
         return wallet;
     }
 
+    @Override
     public Wallet getTronWallet(String userId, boolean craeteIfNotExist) {
         Wallet wallet = walletRepository.findByUidAndChainType(userId, ChainType.TRON);
         if (wallet == null && craeteIfNotExist) {
@@ -88,6 +93,7 @@ public class WalletServiceImpl implements WalletService, InitializingBean {
         return wallet;
     }
 
+    @Override
     public Wallet getSolanaWallet(String userId, boolean craeteIfNotExist) {
         Wallet wallet = walletRepository.findByUidAndChainType(userId, ChainType.SOLANA);
         if (wallet == null && craeteIfNotExist) {
@@ -116,6 +122,7 @@ public class WalletServiceImpl implements WalletService, InitializingBean {
         return wallet;
     }
 
+    @Override
     public Map<ChainType, String> initWallets(String userId) {
         Map<ChainType, String> result = new HashMap<>();
         Wallet w1 = getEvmWallet(userId, true);
@@ -125,10 +132,12 @@ public class WalletServiceImpl implements WalletService, InitializingBean {
         return result;
     }
 
+    @Override
     public BigInteger balanceOf(String address, ChainType chainType, Integer chainId) {
         throw new UnsupportedOperationException("Not implemented");
     }
 
+    @Override
     public BigInteger balanceOfContract(String address, String contractAddress, ChainType chainType, Integer chainId) {
         throw new UnsupportedOperationException("Not implemented");
     }
@@ -151,6 +160,7 @@ public class WalletServiceImpl implements WalletService, InitializingBean {
         return cn.hutool.core.io.FileUtil.readUtf8String(publicKeyPemPath);
     }
 
+    @Override
     public Wallet getByAddressAndChainType(String address, ChainType chainType) {
         return walletRepository.findByAddressAndChainType(address, chainType);
     }

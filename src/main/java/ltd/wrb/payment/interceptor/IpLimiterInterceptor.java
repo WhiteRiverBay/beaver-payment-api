@@ -21,8 +21,7 @@ public class IpLimiterInterceptor implements HandlerInterceptor {
             throws Exception {
 
         // is handler has annotation?
-        if (handler instanceof HandlerMethod) {
-            HandlerMethod handlerMethod = (HandlerMethod) handler;
+        if (handler instanceof HandlerMethod handlerMethod) {
             if (handlerMethod.getMethod().getAnnotation(IpLimiter.class) != null) {
                 String ip = getIpAddress(request);
                 String key = handlerMethod.getMethod().getName() + "_locker_" + ip;
