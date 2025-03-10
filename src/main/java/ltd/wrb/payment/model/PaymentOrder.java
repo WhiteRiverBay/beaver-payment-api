@@ -1,6 +1,7 @@
 package ltd.wrb.payment.model;
 
 import java.math.BigDecimal;
+import java.util.Map;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -16,8 +17,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import ltd.wrb.payment.enums.ChainType;
 import ltd.wrb.payment.enums.TradeStatus;
-
-import java.util.Map;
 
 @Entity
 @Table(name = "wrb_payment_order")
@@ -94,7 +93,7 @@ public class PaymentOrder {
     private String lockedAddress;
 
     @Column
-    @Size(max = 64, message = "logo length must be less than 128")
+    @Size(max = 200, message = "logo length must be less than 200")
     private String logo;
 
     @Transient

@@ -1,12 +1,12 @@
 package ltd.wrb.payment.util;
 
+import java.security.SecureRandom;
 import java.security.Security;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
-import java.security.SecureRandom;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.util.encoders.Base64;
@@ -24,7 +24,12 @@ public class AESUtil {
 
     public static SecretKey generateAESKey() throws Exception {
         KeyGenerator keyGen = KeyGenerator.getInstance("AES", "BC");
-        keyGen.init(KEY_SIZE);
+        // 使用强随机数生成器初始化KeyGenerator
+        SecureRandom secureRandom = new SecureRandom();
+        // 获取额外的系统熵来增强随机性
+        byte[] seed = secureRandom.generateSeed(16);
+        secureRandom.setSeed(seed);
+        keyGen.init(KEY_SIZE, secureRandom);
         return keyGen.generateKey();
     }
 
