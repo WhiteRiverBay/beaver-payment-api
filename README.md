@@ -43,3 +43,8 @@ Beaver Payment is an self-hosted stable coin checkout system, designed for busin
     <img src="https://raw.githubusercontent.com/WhiteRiverBay/icons/refs/heads/main/icons/0x6c3ea9036406852006290770BEdFcAbA0e23A0e8.svg" alt="Token 4" width="60" height="60">
 </div>
 
+
+
+### TODO
+
+[ ] Deduct fees from the user's wallet periodically (subscription model).
