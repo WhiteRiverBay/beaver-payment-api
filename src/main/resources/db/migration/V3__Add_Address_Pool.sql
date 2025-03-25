@@ -9,9 +9,9 @@ CREATE TABLE wrb_address_pool (
 );
 
 -- Add indexes for better query performance
-CREATE INDEX idx_address_pool_used ON address_pool(used);
-CREATE INDEX idx_address_pool_uid ON address_pool(uid);
-CREATE INDEX idx_address_pool_chain_type ON address_pool(chain_type);
+CREATE INDEX idx_address_pool_used ON wrb_address_pool(used);
+CREATE INDEX idx_address_pool_uid ON wrb_address_pool(uid);
+CREATE INDEX idx_address_pool_chain_type ON wrb_address_pool(chain_type);
 
 -- Modify logo column length in wrb_payment_order table
 ALTER TABLE wrb_payment_order MODIFY COLUMN logo VARCHAR(200);
