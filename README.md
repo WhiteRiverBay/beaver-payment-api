@@ -47,4 +47,6 @@ Beaver Payment is an self-hosted stable coin checkout system, designed for busin
 
 ### TODO
 
-[ ] Deduct fees from the user's wallet periodically (subscription model).
+ []Deduct fees from the user's wallet periodically (subscription model).
+ []Fix bugs of statistic.
+ []Upgrade UI
