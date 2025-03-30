@@ -85,70 +85,85 @@ public class NotifyServiceImpl implements NotifyService {
             log.info("Task is locked: {}", task.getId());
             return;
         }
-        if (!force && task.getRetryCount() >= 29) {
-            task.setStatus(NotifyStatus.FINAL_FAIL);
-            task.setUpdatedAt(System.currentTimeMillis());
-            task.setExecutedAt(System.currentTimeMillis());
-            task.setExecutor("system");
-            notifyTaskRepository.save(task);
-            return;
-        }
-        String url = task.getUrl();
-
-        long nextNotifyTimeInMs = task.getRetryCount() > 5 ? 3600000 : 60000;
-
-        PaymentOrder order = paymentOrderRepository.findById(task.getPaymentId()).orElse(null);
-        if (order == null) {
-            log.error("[task:{}] Order not found, id: {}", task.getId(), task.getPaymentId());
-            return;
-        }
-        // if (!force && order.getStatus() != TradeStatus.PAID) {
-            // log.error("[task:{}] Order status is not PAID, id: {}", task.getId(), task.getPaymentId());
-            // return;
-        // }
-
-        Map<String, Object> params = new TreeMap<>();
-        params.put("id", task.getPaymentId());
-        params.put("oid", task.getOid());
-        params.put("uid", task.getUid());
-        params.put("timestamp", System.currentTimeMillis());
-        params.put("nonce", IdUtil.fastSimpleUUID());
-        params.put("status",TradeStatus.PAID);
-        params.put("statusCode", order.getStatus().ordinal());
-
-        String base = MapUtil.join(params, "&", "=");
-        String secret = System.getenv("PAYMENT_NOTIFY_SECRET");
-
-        String sign = DigestUtil.sha256Hex(base + secret);
-        params.put("sign", sign);
-
-        String jsonBody = JSONUtil.toJsonStr(params);
-        log.info("[task:{}] Notify: {} body: {}", task.getId(), url, jsonBody);
-        // send request
+        
         try {
-            HttpRequest post = HttpRequest.post(url).body(jsonBody).timeout(5000).contentType("application/json");
-            String body = post.execute().body();
-            if (body.equalsIgnoreCase("success")) {
-                task.setStatus(NotifyStatus.SUCCESS);
-                task.setExecutedAt(System.currentTimeMillis());
-                task.setExecutor("system");
-                task.setUpdatedAt(System.currentTimeMillis());
-                notifyTaskRepository.save(task);
-            } else {
-                log.error("[task:{}] Failed to notify, id: {} url: {} resp: {}", task.getId(), task.getPaymentId(), url,
-                        body);
-                task.setRetryCount(task.getRetryCount() + 1);
-                task.setNextNotifyTime(System.currentTimeMillis() + nextNotifyTimeInMs);
-                task.setUpdatedAt(System.currentTimeMillis());
-                notifyTaskRepository.save(task);
+            // 重新从数据库获取最新的task状态
+            NotifyTask freshTask = notifyTaskRepository.findById(task.getId()).orElse(null);
+            if (freshTask == null) {
+                log.error("[task:{}] Task not found", task.getId());
+                return;
             }
-        } catch (Exception e) {
+            
+            // 使用最新的task进行后续处理
+            if (!force && freshTask.getRetryCount() >= 29) {
+                freshTask.setStatus(NotifyStatus.FINAL_FAIL);
+                freshTask.setUpdatedAt(System.currentTimeMillis());
+                freshTask.setExecutedAt(System.currentTimeMillis());
+                freshTask.setExecutor("system");
+                notifyTaskRepository.save(freshTask);
+                return;
+            }
+            
+            String url = freshTask.getUrl();
 
-            log.error("Failed to notify: {}", e.getMessage());
-            task.setRetryCount(task.getRetryCount() + 1);
-            task.setNextNotifyTime(System.currentTimeMillis() + nextNotifyTimeInMs);
-            task.setUpdatedAt(System.currentTimeMillis());
-            notifyTaskRepository.save(task);
+            long nextNotifyTimeInMs = freshTask.getRetryCount() > 5 ? 3600000 : 60000;
+
+            PaymentOrder order = paymentOrderRepository.findById(freshTask.getPaymentId()).orElse(null);
+            if (order == null) {
+                log.error("[task:{}] Order not found, id: {}", freshTask.getId(), freshTask.getPaymentId());
+                return;
+            }
+            // if (!force && order.getStatus() != TradeStatus.PAID) {
+                // log.error("[task:{}] Order status is not PAID, id: {}", freshTask.getId(), freshTask.getPaymentId());
+                // return;
+            // }
+
+            Map<String, Object> params = new TreeMap<>();
+            params.put("id", freshTask.getPaymentId());
+            params.put("oid", freshTask.getOid());
+            params.put("uid", freshTask.getUid());
+            params.put("timestamp", System.currentTimeMillis());
+            params.put("nonce", IdUtil.fastSimpleUUID());
+            params.put("status",TradeStatus.PAID);
+            params.put("statusCode", order.getStatus().ordinal());
+
+            String base = MapUtil.join(params, "&", "=");
+            String secret = System.getenv("PAYMENT_NOTIFY_SECRET");
+
+            String sign = DigestUtil.sha256Hex(base + secret);
+            params.put("sign", sign);
+
+            String jsonBody = JSONUtil.toJsonStr(params);
+            log.info("[task:{}] Notify: {} body: {}", freshTask.getId(), url, jsonBody);
+            // send request
+            try {
+                HttpRequest post = HttpRequest.post(url).body(jsonBody).timeout(5000).contentType("application/json");
+                String body = post.execute().body();
+                if (body.equalsIgnoreCase("success")) {
+                    freshTask.setStatus(NotifyStatus.SUCCESS);
+                    freshTask.setExecutedAt(System.currentTimeMillis());
+                    freshTask.setExecutor("system");
+                    freshTask.setUpdatedAt(System.currentTimeMillis());
+                    notifyTaskRepository.save(freshTask);
+                } else {
+                    log.error("[task:{}] Failed to notify, id: {} url: {} resp: {}", freshTask.getId(), freshTask.getPaymentId(), url,
+                            body);
+                    freshTask.setRetryCount(freshTask.getRetryCount() + 1);
+                    freshTask.setNextNotifyTime(System.currentTimeMillis() + nextNotifyTimeInMs);
+                    freshTask.setUpdatedAt(System.currentTimeMillis());
+                    notifyTaskRepository.save(freshTask);
+                }
+            } catch (Exception e) {
+
+                log.error("Failed to notify: {}", e.getMessage());
+                freshTask.setRetryCount(freshTask.getRetryCount() + 1);
+                freshTask.setNextNotifyTime(System.currentTimeMillis() + nextNotifyTimeInMs);
+                freshTask.setUpdatedAt(System.currentTimeMillis());
+                notifyTaskRepository.save(freshTask);
+            }
+        } finally {
+            // 确保释放锁
+            cache.unlock(taskLockKey);
         }
     }
 

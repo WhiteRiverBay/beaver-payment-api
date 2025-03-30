@@ -16,7 +16,6 @@ import org.web3j.crypto.Keys;
 import lombok.extern.slf4j.Slf4j;
 import ltd.wrb.payment.enums.ChainType;
 import ltd.wrb.payment.model.Wallet;
-import ltd.wrb.payment.repository.AddressPoolRepository;
 import ltd.wrb.payment.repository.WalletRepository;
 import ltd.wrb.payment.service.WalletService;
 import ltd.wrb.payment.util.EncryptUtil;
@@ -31,8 +30,6 @@ import ltd.wrb.payment.util.Web3jUtil;
 @Slf4j
 public class WalletServiceImpl implements WalletService, InitializingBean {
 
-    @Autowired
-    private AddressPoolRepository addressPoolRepository;
     @Autowired
     private WalletRepository walletRepository;
 

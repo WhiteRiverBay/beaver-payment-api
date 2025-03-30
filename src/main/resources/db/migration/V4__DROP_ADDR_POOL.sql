@@ -1,0 +1,1 @@
+DROP TABLE wrb_address_pool;
